@@ -98,9 +98,18 @@ class _DayPickerState extends State<_DayPicker> {
       final String weekday = weekdays[i];
       result.add(ExcludeSemantics(
         child: Center(
-          child: Text(
-            weekday,
-            style: widget.config.weekdayLabelTextStyle ?? headerStyle,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                weekday,
+                style: widget.config.weekdayLabelTextStyle ?? headerStyle,
+              ),
+              const MySeparator(
+                color: Color(0xffB9C1C6),
+              )
+            ],
           ),
         ),
       ));
@@ -136,10 +145,53 @@ class _DayPickerState extends State<_DayPicker> {
     // 1-based day of month, e.g. 1-31 for January, and 1-29 for February on
     // a leap year.
     int day = -dayOffset;
-    while (day < daysInMonth) {
+    late final int daysInLastMonth;
+    if (month == 1) {
+      daysInLastMonth = DateUtils.getDaysInMonth(year - 1, 12);
+    } else {
+      daysInLastMonth = DateUtils.getDaysInMonth(year, month - 1);
+    }
+    late final int totalSlotDate;
+    final currentNumOfDate = dayOffset + daysInMonth;
+    if (currentNumOfDate <= 35) {
+      totalSlotDate = 35;
+    } else if (currentNumOfDate > 35 && currentNumOfDate <= 42) {
+      totalSlotDate = 42;
+    } else {
+      totalSlotDate = 42;
+    }
+    int numberOfDateNextMonth = totalSlotDate - dayOffset - daysInMonth;
+
+    while (day < totalSlotDate) {
       day++;
       if (day < 1) {
-        dayItems.add(Container());
+        print(daysInLastMonth - day - dayOffset);
+        dayItems.add(Center(
+          child: Text(
+            "${daysInLastMonth + day}",
+            style: const TextStyle(
+              fontSize: 12,
+              fontFamily: "Roboto",
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFB9C1C6),
+            ),
+          ),
+        ));
+      } else if (day > daysInMonth) {
+        // if (day == totalSlotDate) break;
+        if (numberOfDateNextMonth < 1) break;
+        numberOfDateNextMonth--;
+        dayItems.add(Center(
+          child: Text(
+            "${day - daysInMonth}",
+            style: const TextStyle(
+              fontSize: 12,
+              fontFamily: "Roboto",
+              fontWeight: FontWeight.w400,
+              color: Color(0xFFB9C1C6),
+            ),
+          ),
+        ));
       } else {
         final DateTime dayToBuild = DateTime(year, month, day);
         final bool isDisabled = dayToBuild.isAfter(widget.config.lastDate) ||
@@ -173,7 +225,9 @@ class _DayPickerState extends State<_DayPicker> {
           dayColor = widget.config.selectedDayHighlightColor ?? todayColor;
           decoration = BoxDecoration(
             borderRadius: widget.config.dayBorderRadius,
-            border: Border.all(color: dayColor),
+            border: widget.config.customCirleTodayWidget != null
+                ? null
+                : Border.all(color: dayColor),
             shape: widget.config.dayBorderRadius != null
                 ? BoxShape.rectangle
                 : BoxShape.circle,
@@ -237,6 +291,7 @@ class _DayPickerState extends State<_DayPicker> {
               decoration,
               localizations,
               day,
+              dayToBuild.weekday == DateTime.sunday,
               dayTextStyle,
             );
 
@@ -298,6 +353,21 @@ class _DayPickerState extends State<_DayPicker> {
           padding: const EdgeInsets.symmetric(vertical: 1),
           child: dayWidget,
         );
+        if (isToday &&
+            widget.config.customCirleTodayWidget != null &&
+            isToday != isSelectedDay) {
+          dayWidget = Stack(
+            children: [
+              dayWidget,
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment.center,
+                  child: widget.config.customCirleTodayWidget,
+                ),
+              )
+            ],
+          );
+        }
 
         if (isDisabled) {
           dayWidget = ExcludeSemantics(
@@ -349,6 +419,7 @@ class _DayPickerState extends State<_DayPicker> {
     BoxDecoration? decoration,
     MaterialLocalizations localizations,
     int day,
+    bool isSunday,
     TextStyle dayTextStyle,
   ) {
     return Row(
@@ -361,7 +432,9 @@ class _DayPickerState extends State<_DayPicker> {
             child: Center(
               child: Text(
                 localizations.formatDecimal(day),
-                style: dayTextStyle,
+                style: isSunday
+                    ? dayTextStyle.apply(color: Colors.red)
+                    : dayTextStyle,
               ),
             ),
           ),
